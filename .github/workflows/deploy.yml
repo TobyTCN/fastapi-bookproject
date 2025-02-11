@@ -1,68 +1,55 @@
-name: CD Pipeline
+- name: Deploy to server
+uses: appleboy/ssh-action@v0.1.7
+with:
+  host: ${{ secrets.SERVER_IP }}
+  username: ${{ secrets.SERVER_USER }}
+  key: ${{ secrets.SSH_PRIVATE_KEY }}
+  script: |
+    set -e  # Exit script on error
 
-on:
-  push:
-    branches:
-      - main
+    echo "🚀 Starting deployment on server..."
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+    # Ensure deployment directory exists
+    sudo mkdir -p /var/www/fastapi-app
+    sudo chown $USER:$USER /var/www/fastapi-app
+    cd /var/www/fastapi-app
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    # Set up SSH for GitHub
+    mkdir -p ~/.ssh
+    chmod 700 ~/.ssh
+    ssh-keyscan github.com >> ~/.ssh/known_hosts
+    chmod 600 ~/.ssh/known_hosts
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.9"
+    # Clone or update repository
+    if [ ! -d ".git" ]; then
+      echo "📦 Cloning repository..."
+      git clone https://github.com/TobyTCN/fastapi-bookproject.git .
+    else
+      echo "🔄 Repository exists, pulling latest changes..."
+      git reset --hard
+      git pull origin main
+    fi
 
-      - name: Install dependencies
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
+    # Ensure Docker is installed
+    if ! command -v docker &> /dev/null; then
+      echo "🐳 Docker not found, installing..."
+      sudo apt update
+      sudo apt install -y docker.io
+      sudo systemctl start docker
+      sudo systemctl enable docker
+    else
+      echo "🐳 Docker is already installed!"
+    fi
 
-      - name: Build and run FastAPI with Docker
-        run: |
-          docker build -t fastapi-app .
-          docker run -d -p 8000:8000 fastapi-app
+    # Cleanup old Docker containers
+    echo "🧹 Cleaning up old Docker containers..."
+    docker system prune -f || true
 
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e  # Exit on error
+    # Stop running containers (ignore errors if no containers exist)
+    docker compose down || true
 
-            # Ensure deployment directory exists
-            sudo mkdir -p /var/www/fastapi-app
-            sudo chown $USER:$USER /var/www/fastapi-app
-            cd /var/www/fastapi-app
+    # Start the new container
+    echo "🚀 Starting new container..."
+    docker compose up -d --build
 
-            # Clone repo if missing, otherwise pull latest changes
-            if [ ! -d ".git" ]; then
-              git clone https://github.com/TobyTCN/fastapi-bookproject.git .
-            else
-              git reset --hard
-              git pull origin main
-            fi
-
-            # Ensure Docker is installed
-            if ! command -v docker &> /dev/null; then
-              echo "Docker not found, installing..."
-              sudo apt update
-              sudo apt install -y docker.io
-              sudo systemctl start docker
-              sudo systemctl enable docker
-            fi
-
-            # Stop and remove existing containers
-            docker compose down || true  # Ignore errors if no container is running
-
-            # Start new container
-            docker compose up -d --build
-
-            echo "Deployment complete!"
+    echo "✅ Deployment complete!"
