@@ -38,7 +38,7 @@ jobs:
             # Clone or update repository
             if [ ! -d ".git" ]; then
               echo "📦 Cloning repository..."
-              git clone https://github.com/YOUR_GITHUB_USERNAME/fastapi-bookproject.git .
+              git clone https://github.com/TobyTCN/fastapi-bookproject.git .
             else
               echo "🔄 Repository exists, pulling latest changes..."
               git reset --hard
@@ -55,6 +55,11 @@ jobs:
             else
               echo "🐳 Docker is already installed!"
             fi
+
+            # Add user to the docker group (fixes permission issue)
+            echo "🔑 Adding user to Docker group..."
+            sudo usermod -aG docker $USER
+            newgrp docker  # Apply group changes immediately
 
             # Cleanup old Docker containers
             echo "🧹 Cleaning up old Docker containers..."
