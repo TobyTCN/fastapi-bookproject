@@ -56,10 +56,13 @@ jobs:
               echo "🐳 Docker is already installed!"
             fi
 
-            # Add user to the docker group (fixes permission issue)
-            echo "🔑 Adding user to Docker group..."
+            # Fix Docker permission issue
+            echo "🔑 Fixing Docker permissions..."
             sudo usermod -aG docker $USER
-            newgrp docker  # Apply group changes immediately
+            sudo chmod 666 /var/run/docker.sock  # Grant access to Docker socket
+            
+            # Apply changes immediately
+            exec sudo su -l $USER
 
             # Cleanup old Docker containers
             echo "🧹 Cleaning up old Docker containers..."
