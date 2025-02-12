@@ -48,7 +48,7 @@ async def get_book(book_id: int) -> Book:
     """Retrieve a book by its ID"""
     book = db.books.get(book_id)
     if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
+        raise HTTPException(status_code=404, detail="Book not found. this is a test")
     return book
 
 @router.put("/{book_id}", response_model=Book, status_code=status.HTTP_200_OK)
