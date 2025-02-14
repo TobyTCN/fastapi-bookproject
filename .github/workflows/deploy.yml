@@ -42,7 +42,7 @@ jobs:
             else
               echo "🔄 Repository exists, pulling latest changes..."
               git reset --hard
-              git pull origin main
+              git fetch origin main
             fi
 
             # Ensure Docker is installed
