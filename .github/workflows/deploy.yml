@@ -41,8 +41,8 @@ jobs:
               git clone https://github.com/TobyTCN/fastapi-bookproject.git .
             else
               echo "🔄 Repository exists, pulling latest changes..."
-              git reset --hard
               git fetch origin main
+              git reset --hard
             fi
 
             # Ensure Docker is installed
