@@ -42,7 +42,7 @@ jobs:
             else
               echo "🔄 Repository exists, pulling latest changes..."
               git fetch origin main
-              git reset --hard origin/main
+              git reset --hard origin/main  # Ensure latest commit is checked out
               git pull origin main
             fi
 
@@ -53,27 +53,33 @@ jobs:
               sudo apt install -y docker.io
               sudo systemctl start docker
               sudo systemctl enable docker
-            else
-              echo "🐳 Docker is already installed!"
             fi
 
-            # Fix Docker permission issue
+            # Fix Docker permission issues
             echo "🔑 Fixing Docker permissions..."
             sudo usermod -aG docker $USER
-            sudo chmod 666 /var/run/docker.sock  # Grant access to Docker socket
-            
-            # Apply changes immediately
-            exec sudo su -l $USER
+            newgrp docker  # Apply changes immediately
+
+            # Ensure docker-compose is installed
+            if ! command -v docker-compose &> /dev/null; then
+              echo "🔧 Installing docker-compose..."
+              sudo apt update
+              sudo apt install -y docker-compose
+            fi
 
             # Cleanup old Docker containers
             echo "🧹 Cleaning up old Docker containers..."
             docker system prune -f || true
 
             # Stop running containers (ignore errors if no containers exist)
-            docker compose down || true
+            docker-compose down || true
 
             # Start the new container
             echo "🚀 Starting new container..."
-            docker compose up -d --build
+            docker-compose up -d --build
+
+            # Restart Nginx
+            echo "🔄 Restarting Nginx..."
+            sudo systemctl restart nginx
 
             echo "✅ Deployment complete!"
